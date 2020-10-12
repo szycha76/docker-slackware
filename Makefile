@@ -1,10 +1,19 @@
-SRC	:= vbatts/slackware:current
-DST	:= slack02:latest
-MKI	:= slack02:mkimage
+# You may want to change these two:
+USERPROFILE	:= /c/Users/e-mnsi
+HOME	:= /home/szycha
+
+# And probably some of these:
+SL	:= slack02
+DST	:= $(SL):latest
+MKI	:= $(SL):mkimage
+PYTHON	:= $(SL):python3
 HUB	:= szycha/slackware:current
+MKIMG	:= $(USERPROFILE)/GIT/github.com/szycha76/slackware-container
+IMGOUT	:= $(USERPROFILE)/slackware-container
 PWD	:= $(shell /bin/pwd -P)
-MKIMG	:= /c/Users/e-mnsi/GIT/github.com/szycha76/slackware-container
-IMGOUT	:= /c/Users/e-mnsi/slackware-container
+SRC	:= vbatts/slackware:current
+
+# Type 'make' to build basic image
 
 build:
 	docker build -t $(DST) .
@@ -28,6 +37,11 @@ mkimage: build
 	# This won't work since mount --bind is apparently not supported on docker [on Windows?]
 	docker run --rm -v $(MKIMG):/mnt/hd -v $(IMGOUT):/tmp -it $(MKI) /mnt/hd/mkimage-slackware.sh
 
+pt: python
+	docker run --rm -v $(USERPROFILE):$(HOME) -v /c:/mnt/host/c -it $(PYTHON) /bin/bash
+
+python: build
+	docker build -t $(PYTHON) $@
 
 
-.PHONY: mkimage
+.PHONY: mkimage python
