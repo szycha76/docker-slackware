@@ -3,45 +3,70 @@ USERPROFILE	:= /c/Users/e-mnsi
 HOME	:= /home/szycha
 
 # And probably some of these:
-SL	:= slack02
-DST	:= $(SL):latest
-MKI	:= $(SL):mkimage
-PYTHON	:= $(SL):python3
-HUB	:= szycha/slackware:current
+SL	:= slackware
+DST	:= $(SL):current
+MKI	:= $(SL)-mkimage:current
+PYTHON	:= $(SL)-python:current
+JUPYTER	:= $(SL)-jupyter:current
+PFX	:= szycha
 MKIMG	:= $(USERPROFILE)/GIT/github.com/szycha76/slackware-container
 IMGOUT	:= $(USERPROFILE)/slackware-container
 PWD	:= $(shell /bin/pwd -P)
 SRC	:= vbatts/slackware:current
 
+DOCKER	:= docker
+BUILD	:= $(DOCKER) build --no-cache
+RUN	:= $(DOCKER) run
+TAG	:= $(DOCKER) tag
+PUSH	:= $(DOCKER) push
+
 # Type 'make' to build basic image
 
 build:
-	docker build -t $(DST) .
+	$(call labelroot)
+	$(BUILD) -t $(DST) -t $(PFX)/$(DST) .
 
-push: build
-	docker tag $(DST) $(HUB)
-	docker push $(HUB)
+push:
+	$(PUSH) $(PFX)/$(SL):current
+	$(PUSH) $(PFX)/$(PYTHON)
+	$(PUSH) $(PFX)/$(JUPYTER)
 
 q:
-	docker run --rm -v $(PWD):/mnt/hd -it $(SRC) /bin/bash
+	$(RUN) --rm -v $(PWD):/mnt/hd -it $(SRC) /bin/bash
 
 t:
-	docker run --rm -v $(PWD):/mnt/hd -it $(DST) /bin/bash
+	$(RUN) --rm -v $(PWD):/mnt/hd -it $(DST) /bin/bash
 
 mt:
-	docker run --rm -v $(MKIMG):/mnt/hd -v $(IMGOUT):/tmp -it $(MKI) /bin/bash
+	$(RUN) --rm -v $(MKIMG):/mnt/hd -v $(IMGOUT):/tmp -it $(MKI) /bin/bash
 
 mkimage: build
-	docker build -t $(MKI) $@
+	$(call labelroot)
+	$(BUILD) -t $(MKI) $@
 	mkdir -pv $(IMGOUT)
 	# This won't work since mount --bind is apparently not supported on docker [on Windows?]
-	docker run --rm -v $(MKIMG):/mnt/hd -v $(IMGOUT):/tmp -it $(MKI) /mnt/hd/mkimage-slackware.sh
+	$(RUN) --rm -v $(MKIMG):/mnt/hd -v $(IMGOUT):/tmp -it $(MKI) /mnt/hd/mkimage-slackware.sh
 
 pt: python
-	docker run --rm -v $(USERPROFILE):$(HOME) -v /c:/mnt/host/c -it $(PYTHON) /bin/bash
+	$(RUN) --rm -v $(USERPROFILE):$(HOME) -v /c:/mnt/host/c -it $(PYTHON) /bin/bash
+
+python_here: python
+	if [[ -z "$(WD)" ]]; then exit 1; fi
+	$(RUN) --rm -v $(USERPROFILE):$(HOME) -v /c:/mnt/host/c -v $(WD):/mnt/hd -it $(PYTHON) /bin/bash
 
 python: build
-	docker build -t $(PYTHON) $@
+	$(call labelroot)
+	$(BUILD) -t $(PYTHON) -t $(PFX)/$(PYTHON) $@
 
+jupyter: python
+	$(call labelroot)
+	$(BUILD) -t $(JUPYTER) -t $(PFX)/$(JUPYTER) $@
 
-.PHONY: mkimage python
+ju:
+	$(RUN) --rm -v $(USERPROFILE):$(HOME) -v /c:/mnt/host/c -v $(WD):/mnt/hd -p 8888:8888 -it $(JUPYTER) /bin/bash
+
+define labelroot
+$(shell echo $@ > $@/.buildtag || echo $@ > .buildtag)
+endef
+
+.PHONY: mkimage python jupyter

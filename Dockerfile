@@ -13,3 +13,5 @@ RUN yes | slackpkg install libmnl pam-1 libcap-ng iptables libpcap dbus-1 \
 # PAM dependencies
 RUN yes | slackpkg install gnome-keyring libpwquality cracklib libtirpc \
 	e2fsprogs # SIC(!)
+
+COPY .buildtag /
